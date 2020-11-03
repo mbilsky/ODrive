@@ -230,6 +230,7 @@ build{
     sources=sources,
     includes={
         'Drivers/DRV8301',
+        'Drivers/DRV8323',
         'MotorControl',
         'fibre/cpp/include',
         '.',

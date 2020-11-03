@@ -67,8 +67,8 @@ struct BoardConfig_t {
     uint32_t uart0_baudrate = 115200;
     uint32_t uart1_baudrate = 115200;
     uint32_t uart2_baudrate = 115200;
-    bool enable_can0 = true;
-    bool enable_i2c0 = false;
+    bool enable_can0 = false;
+    bool enable_i2c0 = true;
     bool enable_ascii_protocol_on_usb = true;
     float max_regen_current = 0.0f;
     float brake_resistance = DEFAULT_BRAKE_RESISTANCE;
@@ -82,11 +82,11 @@ struct BoardConfig_t {
      * If enabled, if the measured DC voltage exceeds `dc_bus_overvoltage_ramp_start`,
      * the ODrive will sink more power than usual into the the brake resistor
      * in an attempt to bring the voltage down again.
-     * 
+     *
      * The brake duty cycle is increased by the following amount:
      *  vbus_voltage == dc_bus_overvoltage_ramp_start  =>  brake_duty_cycle += 0%
      *  vbus_voltage == dc_bus_overvoltage_ramp_end  =>  brake_duty_cycle += 100%
-     * 
+     *
      * Remarks:
      *  - This feature is active even when all motors are disarmed.
      *  - This feature is disabled if `brake_resistance` is non-positive.

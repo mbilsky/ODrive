@@ -69,9 +69,9 @@ public:
         // float current_lim = 70.0f; //[A]
         float current_lim = 10.0f;          //[A]
         float current_lim_margin = 8.0f;    // Maximum violation of current_lim
-        float torque_lim = std::numeric_limits<float>::infinity();           //[Nm]. 
+        float torque_lim = std::numeric_limits<float>::infinity();           //[Nm].
         // Value used to compute shunt amplifier gains
-        float requested_current_range = 60.0f; // [A]
+        float requested_current_range = 45.0f; // [A]
         float current_control_bandwidth = 1000.0f;  // [rad/s]
         float inverter_temp_limit_lower = 100;
         float inverter_temp_limit_upper = 120;
@@ -158,7 +158,7 @@ public:
     Error error_ = ERROR_NONE;
     // Do not write to this variable directly!
     // It is for exclusive use by the safety_critical_... functions.
-    ArmedState armed_state_ = ARMED_STATE_DISARMED; 
+    ArmedState armed_state_ = ARMED_STATE_DISARMED;
     bool is_calibrated_ = config_.pre_calibrated;
     Iph_BC_t current_meas_ = {0.0f, 0.0f};
     Iph_BC_t DC_calib_ = {0.0f, 0.0f};

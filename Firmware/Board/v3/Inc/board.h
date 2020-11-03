@@ -23,9 +23,9 @@
 #include <Drivers/STM32/stm32_system.h>
 
 #if HW_VERSION_MINOR <= 3
-#define SHUNT_RESISTANCE (675e-6f)
+#define SHUNT_RESISTANCE (3e-3f)
 #else
-#define SHUNT_RESISTANCE (500e-6f)
+#define SHUNT_RESISTANCE (3e-3f)
 #endif
 
 #define AXIS_COUNT (2)
