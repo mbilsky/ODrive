@@ -93,6 +93,8 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
     }
 
 
+    
+    
     // check incoming packet type
     if (cmd[0] == 'p') { // position control
         unsigned motor_number;
@@ -196,7 +198,39 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
                     (double)axes[motor_number]->encoder_.vel_estimate_);
         }
 
-    } else if (cmd[0] == 'h') {  // Help
+    } else if (cmd[0] == 'e') { // dump errors
+        unsigned motor_number;
+        int numscan = sscanf(cmd, "e %u", &motor_number);
+        if (numscan < 1) {
+            respond(response_channel, use_checksum, "invalid command format");
+        } else if (motor_number >= AXIS_COUNT) {
+            respond(response_channel, use_checksum, "invalid motor %u", motor_number);
+        } else {
+            respond(response_channel, use_checksum, "%u;%u;%u;%u;%u",
+                    (int)axes[motor_number]->error_,
+                    (int)axes[motor_number]->fet_thermistor_.error_,
+                    (int)axes[motor_number]->motor_.error_,
+                    (int)axes[motor_number]->encoder_.error_,
+                    (int)axes[motor_number]->controller_.error_);
+        }
+
+    }else if (cmd[0] == 'a') { // dump all parameters
+        unsigned motor_number;
+        int numscan = sscanf(cmd, "a %u", &motor_number);
+        if (numscan < 1) {
+            respond(response_channel, use_checksum, "invalid command format");
+        } else if (motor_number >= AXIS_COUNT) {
+            respond(response_channel, use_checksum, "invalid motor %u", motor_number);
+        } else {
+            respond(response_channel, use_checksum, "%f;%f;%f;%u;%f",
+                    (double)axes[motor_number]->encoder_.pos_estimate_,
+                    (double)axes[motor_number]->encoder_.vel_estimate_,
+                    (double)axes[motor_number]->motor_.current_control_.Iq_measured,
+                    (int)axes[motor_number]->current_state_,
+                    (double)axes[motor_number]->fet_thermistor_.temperature_);
+        }
+
+    }else if (cmd[0] == 'h') {  // Help
         respond(response_channel, use_checksum, "Please see documentation for more details");
         respond(response_channel, use_checksum, "");
         respond(response_channel, use_checksum, "Available commands syntax reference:");
@@ -230,7 +264,12 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
             odrv.reboot();
         }
 
-    } else if (cmd[0] == 'r') { // read property
+    }  else if (cmd[0] == 'k'){ //clear errors
+           axes[0]->clear_errors();
+           axes[1]->clear_errors();
+        
+
+    }else if (cmd[0] == 'r') { // read property
         char name[MAX_LINE_LENGTH];
         int numscan = sscanf(cmd, "r %255s", name);
         if (numscan < 1) {
