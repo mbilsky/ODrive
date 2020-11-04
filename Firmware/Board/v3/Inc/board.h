@@ -64,6 +64,7 @@
 
 #ifdef __cplusplus
 #include <Drivers/DRV8301/drv8301.hpp>
+#include <Drivers/DRV8323/drv8323.hpp>
 #include <Drivers/STM32/stm32_gpio.hpp>
 #include <Drivers/STM32/stm32_spi_arbiter.hpp>
 #include <MotorControl/pwm_input.hpp>
