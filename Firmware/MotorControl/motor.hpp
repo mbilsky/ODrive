@@ -7,6 +7,8 @@
 
 #include "drv8301.h"
 
+#include "drv8323.h"
+
 class Motor : public ODriveIntf::MotorIntf {
 public:
     struct Iph_BC_t {
@@ -40,9 +42,9 @@ public:
     // example: current_lim and calibration_current will instead determine the maximum voltage applied to the motor.
     struct Config_t {
         bool pre_calibrated = false; // can be set to true to indicate that all values here are valid
-        int32_t pole_pairs = 7;
-        float calibration_current = 10.0f;    // [A]
-        float resistance_calib_max_voltage = 2.0f; // [V] - You may need to increase this if this voltage isn't sufficient to drive calibration_current through the motor.
+        int32_t pole_pairs = 6;
+        float calibration_current = 5.0f;    // [A]
+        float resistance_calib_max_voltage = 3.0f; // [V] - You may need to increase this if this voltage isn't sufficient to drive calibration_current through the motor.
         float phase_inductance = 0.0f;        // to be set by measure_phase_inductance
         float phase_resistance = 0.0f;        // to be set by measure_phase_resistance
         float torque_constant = 0.04f;         // [Nm/A] for PM motors, [Nm/A^2] for induction motors. Equal to 8.27/Kv of the motor
@@ -54,8 +56,8 @@ public:
         float current_lim_margin = 8.0f;    // Maximum violation of current_lim
         float torque_lim = std::numeric_limits<float>::infinity();           //[Nm]. 
         // Value used to compute shunt amplifier gains
-        float requested_current_range = 60.0f; // [A]
-        float current_control_bandwidth = 1000.0f;  // [rad/s]
+        float requested_current_range = 15.0f; // [A]
+        float current_control_bandwidth = 100.0f;  // [rad/s]
         float inverter_temp_limit_lower = 100;
         float inverter_temp_limit_upper = 120;
         float acim_slip_velocity = 14.706f; // [rad/s electrical] = 1/rotor_tau
@@ -109,10 +111,12 @@ public:
     const GateDriverHardwareConfig_t gate_driver_config_;
     Config_t& config_;
     Axis* axis_ = nullptr; // set by Axis constructor
+    uint16_t error_register = 0x0;
+    uint16_t error_register2 = 0x0;
 
 //private:
 
-    DRV8301_Obj gate_driver_; // initialized in constructor
+    DRV8323_Obj gate_driver_; // initialized in constructor
     uint16_t next_timings_[3] = {
         TIM_1_8_PERIOD_CLOCKS / 2,
         TIM_1_8_PERIOD_CLOCKS / 2,

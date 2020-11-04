@@ -13,9 +13,9 @@
 
 #if HW_VERSION_MAJOR == 3
 #if HW_VERSION_MINOR <= 3
-#define SHUNT_RESISTANCE (675e-6f)
+#define SHUNT_RESISTANCE (3e-3f)
 #else
-#define SHUNT_RESISTANCE (500e-6f)
+#define SHUNT_RESISTANCE (3e-3f)
 #endif
 #endif
 

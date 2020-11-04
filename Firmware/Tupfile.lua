@@ -166,6 +166,7 @@ end
 -- TODO: cleaner separation of the platform code and the rest
 stm_includes += '.'
 stm_includes += 'Drivers/DRV8301'
+stm_includes += 'Drivers/DRV8323'
 stm_sources += boarddir..'/Src/syscalls.c'
 build{
     name='stm_platform',
@@ -184,6 +185,7 @@ build{
     packages={'stm_platform'},
     sources={
         'Drivers/DRV8301/drv8301.c',
+        'Drivers/DRV8323/drv8323.c',
         'MotorControl/utils.cpp',
         'MotorControl/arm_sin_f32.c',
         'MotorControl/arm_cos_f32.c',
@@ -211,6 +213,7 @@ build{
     },
     includes={
         'Drivers/DRV8301',
+        'Drivers/DRV8323',
         'MotorControl',
         'fibre/cpp/include',
         '.',
@@ -219,7 +222,7 @@ build{
 }
 
 if tup.getconfig('DOCTEST') == 'true' then
-    TEST_INCLUDES = '-I. -I./MotorControl -I./fibre/cpp/include -I./Drivers/DRV8301 -I./doctest'
+    TEST_INCLUDES = '-I. -I./MotorControl -I./fibre/cpp/include -I./Drivers/DRV8301 -I./doctest -I./Drivers/DRV8323'
     tup.foreach_rule('Tests/*.cpp', 'g++ -O3 -std=c++17 '..TEST_INCLUDES..' -c %f -o %o', 'Tests/bin/%B.o')
     tup.frule{inputs='Tests/bin/*.o', command='g++ %f -o %o', outputs='Tests/test_runner.exe'}
     tup.frule{inputs='Tests/test_runner.exe', command='%f'}

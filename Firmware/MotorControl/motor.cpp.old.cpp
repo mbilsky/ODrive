@@ -51,8 +51,6 @@ bool Motor::arm() {
 void Motor::reset_current_control() {
     current_control_.v_current_control_integral_d = 0.0f;
     current_control_.v_current_control_integral_q = 0.0f;
-    current_control_.acim_rotor_flux = 0.0f;
-    current_control_.Ibus = 0.0f;
 }
 
 // @brief Tune the current controller based on phase resistance and inductance
@@ -75,9 +73,9 @@ void Motor::DRV8301_setup() {
 
     // Solve for exact gain, then snap down to have equal or larger range as requested
     // or largest possible range otherwise
-    constexpr float kMargin = 0.90f;
-    constexpr float kTripMargin = 1.0f; // Trip level is at edge of linear range of amplifer
-    constexpr float max_output_swing = 1.35f; // [V] out of amplifier
+    static const float kMargin = 0.90f;
+    static const float kTripMargin = 1.0f; // Trip level is at edge of linear range of amplifer
+    static const float max_output_swing = 1.35f; // [V] out of amplifier
     float max_unity_gain_current = kMargin * max_output_swing * hw_config_.shunt_conductance; // [A]
     float requested_gain = max_unity_gain_current / config_.requested_current_range; // [V/V]
 
@@ -107,9 +105,7 @@ void Motor::DRV8301_setup() {
     current_control_.overcurrent_trip_level = (kTripMargin / kMargin) * current_control_.max_allowed_current;
 
 
-
-
-//rewriting for 8323 
+    //rewriting for 8323 
 
     //setup = enable for now
     DRV8323_setupSpi(&gate_driver_);
@@ -151,25 +147,71 @@ HAL_Delay(1);
 
     DRV8323_writeSpi(&gate_driver_,ADR_CSA_CTRL,reg_temp);
 
-}
     
+    
+    
+
+
+
+    // We now have the gain settings we want to use, lets set up DRV chip
+   // DRV_SPI_8301_Vars_t* local_regs = &gate_driver_regs_;
+    //DRV8301_enable(&gate_driver_);
+    
+    
+    /*
+    DRV8301_setupSpi(&gate_driver_, local_regs);
+    
+
+
+    local_regs->Ctrl_Reg_1.OC_MODE = DRV8301_OcMode_LatchShutDown;
+    // Overcurrent set to approximately 150A at 100degC. This may need tweaking.
+    local_regs->Ctrl_Reg_1.OC_ADJ_SET = DRV8301_VdsLevel_0p730_V;
+    local_regs->Ctrl_Reg_2.GAIN = gain_snap_down->second;
+
+    local_regs->SndCmd = true;
+    DRV8301_writeData(&gate_driver_, local_regs);
+    local_regs->RcvCmd = true;
+    DRV8301_readData(&gate_driver_, local_regs);
+    */
+}
+
+void Motor::get_drv_error(){
+
+
+   // DRV8301_Word_t      readWord;
+    
+    //readWord = DRV8301_readSpi(&gate_driver_,DRV8301_RegName_Control_2);
+    //Motor::error_register = DRV8301_readSpi(&gate_driver_, DRV8301_RegName_Control_2);//DRV8323_readSpi(ADR_GATE_DRV_HS);
+    error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_OCP_CTRL);
+
+    //error_register = (error_register & ~CSA_CTRL_CSA_GAIN) | (CSA_CTRL_CSA_GAIN_10VV & CSA_CTRL_CSA_GAIN);
+
+    //DRV8323_writeSpi(ADR_CSA_CTRL,error_register);
+   // HAL_Delay(1);
+    //error_register = (uint16_t) DRV8323_readSpi(ADR_CSA_CTRL);
+    
+    //error_register &= ~(CSA_CTRL_CSA_GAIN_10VV);
+
+    //Motor::error_register = Motor::error_register & 0x0000;
+
+    //error_register = (uint16_t) readWord;
+
+}
+
+
+
 // @brief Checks if the gate driver is in operational state.
 // @returns: true if the gate driver is OK (no fault), false otherwise
 bool Motor::check_DRV_fault() {
     //TODO: make this pin configurable per motor ch
     GPIO_PinState nFAULT_state = HAL_GPIO_ReadPin(gate_driver_config_.nFAULT_port, gate_driver_config_.nFAULT_pin);
     if (nFAULT_state == GPIO_PIN_RESET) {
-           //if(axis_->axis_num_ == 1){
-         error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_FAULT_STAT);
+        //if(axis_->axis_num_ == 1){
+        error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_FAULT_STAT);
         error_register2 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_VGS_STAT);
-          //}
-
+    //}
         // Update DRV Fault Code
-        //gate_driver_exported_.drv_fault = (GateDriverIntf::DrvFault)DRV8301_getFaultType(&gate_driver_);
-        
-        
-        
-        
+        ////drv_fault_ = DRV8301_getFaultType(&gate_driver_);
         // Update/Cache all SPI device registers
         // DRV_SPI_8301_Vars_t* local_regs = &gate_driver_regs_;
         // local_regs->RcvCmd = true;
@@ -179,11 +221,32 @@ bool Motor::check_DRV_fault() {
     return true;
 }
 
-void Motor::set_error(Motor::Error error){
+void Motor::set_error(Motor::Error_t error){
     error_ |= error;
     axis_->error_ |= Axis::ERROR_MOTOR_FAILED;
     safety_critical_disarm_motor_pwm(*this);
     update_brake_current();
+}
+
+float Motor::get_inverter_temp() {
+    float adc = adc_measurements_[hw_config_.inverter_thermistor_adc_ch];
+    float normalized_voltage = adc / adc_full_scale;
+    return horner_fma(normalized_voltage, thermistor_poly_coeffs, thermistor_num_coeffs);
+}
+
+bool Motor::update_thermal_limits() {
+    float fet_temp = get_inverter_temp();
+    float temp_margin = config_.inverter_temp_limit_upper - fet_temp;
+    float derating_range = config_.inverter_temp_limit_upper - config_.inverter_temp_limit_lower;
+    thermal_current_lim_ = config_.current_lim * (temp_margin / derating_range);
+    if (!(thermal_current_lim_ >= 0.0f)) { //Funny polarity to also catch NaN
+        thermal_current_lim_ = 0.0f;
+    }
+    if (fet_temp > config_.inverter_temp_limit_upper + 5) {
+        //set_error(ERROR_INVERTER_OVER_TEMP);
+       // return false;
+    }
+    return true;
 }
 
 bool Motor::do_checks() {
@@ -191,7 +254,10 @@ bool Motor::do_checks() {
         set_error(ERROR_DRV_FAULT);
         return false;
     }
-
+    if (!update_thermal_limits()) {
+        //error already set in function
+        return false;
+    }
     return true;
 }
 
@@ -200,34 +266,14 @@ float Motor::effective_current_lim() {
     float current_lim = config_.current_lim;
     // Hardware limit
     if (axis_->motor_.config_.motor_type == Motor::MOTOR_TYPE_GIMBAL) {
-        current_lim = std::min(current_lim, 0.98f*one_by_sqrt3*vbus_voltage); //gimbal motor is voltage control
+        current_lim = std::min(current_lim, 0.98f*one_by_sqrt3*vbus_voltage);
     } else {
         current_lim = std::min(current_lim, axis_->motor_.current_control_.max_allowed_current);
     }
+    // Thermal limit
+    //current_lim = std::min(current_lim, thermal_current_lim_);
 
-    // Apply axis current limiters
-    for (const CurrentLimiter* const limiter : axis_->current_limiters_) {
-        current_lim = std::min(current_lim, limiter->get_current_limit(config_.current_lim));
-    }
-
-    effective_current_lim_ = current_lim;
-
-    return effective_current_lim_;
-}
-
-//return the maximum available torque for the motor.
-//Note - for ACIM motors, available torque is allowed to be 0.
-float Motor::max_available_torque() {
-    if (config_.motor_type == Motor::MOTOR_TYPE_ACIM) {
-        float max_torque = effective_current_lim() * config_.torque_constant * current_control_.acim_rotor_flux;
-        max_torque = std::clamp(max_torque, 0.0f, config_.torque_lim);
-        return max_torque;
-    }
-    else {
-        float max_torque = effective_current_lim() * config_.torque_constant;
-        max_torque = std::clamp(max_torque, 0.0f, config_.torque_lim);
-        return max_torque;
-    }
+    return current_lim;
 }
 
 void Motor::log_timing(TimingLog_t log_idx) {
@@ -254,7 +300,7 @@ float Motor::phase_current_from_adcval(uint32_t ADCValue) {
 // TODO check Ibeta balance to verify good motor connection
 bool Motor::measure_phase_resistance(float test_current, float max_voltage) {
     static const float kI = 10.0f;                                 // [(V/s)/A]
-    static const int num_test_cycles = (int)(3.0f / CURRENT_MEAS_PERIOD); // Test runs for 3s
+    static const int num_test_cycles = static_cast<int>(3.0f / CURRENT_MEAS_PERIOD); // Test runs for 3s
     float test_voltage = 0.0f;
     
     size_t i = 0;
@@ -323,8 +369,7 @@ bool Motor::measure_phase_inductance(float voltage_low, float voltage_high) {
 
 bool Motor::run_calibration() {
     float R_calib_max_voltage = config_.resistance_calib_max_voltage;
-    if (config_.motor_type == MOTOR_TYPE_HIGH_CURRENT
-        || config_.motor_type == MOTOR_TYPE_ACIM) {
+    if (config_.motor_type == MOTOR_TYPE_HIGH_CURRENT) {
         if (!measure_phase_resistance(config_.calibration_current, R_calib_max_voltage))
             return false;
         if (!measure_phase_inductance(-R_calib_max_voltage, R_calib_max_voltage))
@@ -367,7 +412,7 @@ bool Motor::FOC_voltage(float v_d, float v_q, float pwm_phase) {
     float c = our_arm_cos_f32(pwm_phase);
     float s = our_arm_sin_f32(pwm_phase);
     float v_alpha = c*v_d - s*v_q;
-    float v_beta = c*v_q + s*v_d;
+    float v_beta  = c*v_q + s*v_d;
     return enqueue_voltage_timings(v_alpha, v_beta);
 }
 
@@ -379,7 +424,8 @@ bool Motor::FOC_current(float Id_des, float Iq_des, float I_phase, float pwm_pha
     ictrl.Iq_setpoint = Iq_des;
 
     // Check for current sense saturation
-    if (std::abs(current_meas_.phB) > ictrl.overcurrent_trip_level || std::abs(current_meas_.phC) > ictrl.overcurrent_trip_level) {
+    if (fabsf(current_meas_.phB) > ictrl.overcurrent_trip_level
+     || fabsf(current_meas_.phC) > ictrl.overcurrent_trip_level) {
         set_error(ERROR_CURRENT_SENSE_SATURATION);
         return false;
     }
@@ -397,10 +443,11 @@ bool Motor::FOC_current(float Id_des, float Iq_des, float I_phase, float pwm_pha
     ictrl.Id_measured += ictrl.I_measured_report_filter_k * (Id - ictrl.Id_measured);
 
     // Check for violation of current limit
-    float I_trip = effective_current_lim() + config_.current_lim_margin;
+    float I_trip = config_.current_lim_tolerance * effective_current_lim();
     if (SQ(Id) + SQ(Iq) > SQ(I_trip)) {
-        set_error(ERROR_CURRENT_LIMIT_VIOLATION);
-        return false;
+       // set_error(ERROR_CURRENT_UNSTABLE);
+        
+        //return false;
     }
 
     // Current error
@@ -438,7 +485,7 @@ bool Motor::FOC_current(float Id_des, float Iq_des, float I_phase, float pwm_pha
     float c_p = our_arm_cos_f32(pwm_phase);
     float s_p = our_arm_sin_f32(pwm_phase);
     float mod_alpha = c_p * mod_d - s_p * mod_q;
-    float mod_beta = c_p * mod_q + s_p * mod_d;
+    float mod_beta  = c_p * mod_q + s_p * mod_d;
 
     // Report final applied voltage in stationary frame (for sensorles estimator)
     ictrl.final_v_alpha = mod_to_V * mod_alpha;
@@ -449,94 +496,30 @@ bool Motor::FOC_current(float Id_des, float Iq_des, float I_phase, float pwm_pha
         return false; // error set inside enqueue_modulation_timings
     log_timing(TIMING_LOG_FOC_CURRENT);
 
-    if (axis_->axis_num_ == 0) {
-
-        // Edit these to suit your capture needs
-        float trigger_data = ictrl.v_current_control_integral_d;
-        float trigger_threshold = 0.5f;
-        float sample_data = Ialpha;
-
-        static bool ready = false;
-        static bool capturing = false;
-        if (trigger_data < trigger_threshold) {
-            ready = true;
-        }
-        if (ready && trigger_data >= trigger_threshold) {
-            capturing = true;
-            ready = false;
-        }
-        if (capturing) {
-            oscilloscope[oscilloscope_pos] = sample_data;
-            if (++oscilloscope_pos >= OSCILLOSCOPE_SIZE) {
-                oscilloscope_pos = 0;
-                capturing = false;
-            }
-        }
-    }
-
     return true;
 }
 
-// torque_setpoint [Nm]
-// phase [rad electrical]
-// phase_vel [rad/s electrical]
-bool Motor::update(float torque_setpoint, float phase, float phase_vel) {
-    float current_setpoint = 0.0f;
+
+bool Motor::update(float current_setpoint, float phase, float phase_vel) {
+    current_setpoint *= config_.direction;
     phase *= config_.direction;
     phase_vel *= config_.direction;
-
-    if (config_.motor_type == MOTOR_TYPE_ACIM) {
-        current_setpoint = torque_setpoint / (config_.torque_constant * fmax(current_control_.acim_rotor_flux, config_.acim_gain_min_flux));
-    }
-    else {
-        current_setpoint = torque_setpoint / config_.torque_constant;
-    }
-    current_setpoint *= config_.direction;
-
-    // TODO: 2-norm vs independent clamping (current could be sqrt(2) bigger)
-    float ilim = effective_current_lim();
-    float id = std::clamp(current_control_.Id_setpoint, -ilim, ilim);
-    float iq = std::clamp(current_setpoint, -ilim, ilim);
-
-    if (config_.motor_type == MOTOR_TYPE_ACIM) {
-        // Note that the effect of the current commands on the real currents is actually 1.5 PWM cycles later
-        // However the rotor time constant is (usually) so slow that it doesn't matter
-        // So we elect to write it as if the effect is immediate, to have cleaner code
-
-        if (config_.acim_autoflux_enable) {
-            float abs_iq = fabsf(iq);
-            float gain = abs_iq > id ? config_.acim_autoflux_attack_gain : config_.acim_autoflux_decay_gain;
-            id += gain * (abs_iq - id) * current_meas_period;
-            id = std::clamp(id, config_.acim_autoflux_min_Id, ilim);
-            current_control_.Id_setpoint = id;
-        }
-
-        // acim_rotor_flux is normalized to units of [A] tracking Id; rotor inductance is unspecified
-        float dflux_by_dt = config_.acim_slip_velocity * (id - current_control_.acim_rotor_flux);
-        current_control_.acim_rotor_flux += dflux_by_dt * current_meas_period;
-        float slip_velocity = config_.acim_slip_velocity * (iq / current_control_.acim_rotor_flux);
-        // Check for issues with small denominator. Polarity of check to catch NaN too
-        bool acceptable_vel = fabsf(slip_velocity) <= 0.1f * (float)current_meas_hz;
-        if (!acceptable_vel)
-            slip_velocity = 0.0f;
-        phase_vel += slip_velocity;
-        // reporting only:
-        current_control_.async_phase_vel = slip_velocity;
-
-        current_control_.async_phase_offset += slip_velocity * current_meas_period;
-        current_control_.async_phase_offset = wrap_pm_pi(current_control_.async_phase_offset);
-        phase += current_control_.async_phase_offset;
-        phase = wrap_pm_pi(phase);
-    }
 
     float pwm_phase = phase + 1.5f * current_meas_period * phase_vel;
 
     // Execute current command
-    switch(config_.motor_type){
-        case MOTOR_TYPE_HIGH_CURRENT: return FOC_current(id, iq, phase, pwm_phase); break;
-        case MOTOR_TYPE_ACIM: return FOC_current(id, iq, phase, pwm_phase); break;
-        case MOTOR_TYPE_GIMBAL: return FOC_voltage(id, iq, pwm_phase); break;
-        default: set_error(ERROR_NOT_IMPLEMENTED_MOTOR_TYPE); return false; break;
+    // TODO: move this into the mot
+    if (config_.motor_type == MOTOR_TYPE_HIGH_CURRENT) {
+        if(!FOC_current(0.0f, current_setpoint, phase, pwm_phase)){
+            return false;
+        }
+    } else if (config_.motor_type == MOTOR_TYPE_GIMBAL) {
+        //In gimbal motor mode, current is reinterptreted as voltage.
+        if(!FOC_voltage(0.0f, current_setpoint, pwm_phase))
+            return false;
+    } else {
+        set_error(ERROR_NOT_IMPLEMENTED_MOTOR_TYPE);
+        return false;
     }
     return true;
 }
