@@ -654,12 +654,12 @@ void update_brake_current() {
     ibus_ += odrv.ibus_report_filter_k_ * (Ibus_sum - ibus_);
 
     if (Ibus_sum > odrv.config_.dc_max_positive_current) {
-        low_level_fault(Motor::ERROR_DC_BUS_OVER_CURRENT);
-        return;
+        //low_level_fault(Motor::ERROR_DC_BUS_OVER_CURRENT);
+        //return;
     }
     if (Ibus_sum < odrv.config_.dc_max_negative_current) {
-        low_level_fault(Motor::ERROR_DC_BUS_OVER_REGEN_CURRENT);
-        return;
+        //low_level_fault(Motor::ERROR_DC_BUS_OVER_REGEN_CURRENT);
+        //return;
     }
     
     int high_on = (int)(TIM_APB1_PERIOD_CLOCKS * (1.0f - brake_duty));

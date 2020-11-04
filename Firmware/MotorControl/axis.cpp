@@ -175,6 +175,8 @@ bool Axis::do_checks() {
     if (!(vbus_voltage <= odrv.config_.dc_bus_overvoltage_trip_level))
         error_ |= ERROR_DC_BUS_OVER_VOLTAGE;
 
+
+        motor_.effective_current_lim();
     // Sub-components should use set_error which will propegate to this error_
     for (ThermistorCurrentLimiter* thermistor : thermistors_) {
         thermistor->do_checks();
