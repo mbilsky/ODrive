@@ -153,7 +153,9 @@ HAL_Delay(1);
     DRV8323_writeSpi(&gate_driver_,ADR_CSA_CTRL,reg_temp);
 
 }
-    
+
+ bool lastDRVFaultState = false;
+
 // @brief Checks if the gate driver is in operational state.
 // @returns: true if the gate driver is OK (no fault), false otherwise
 bool Motor::check_DRV_fault() {
@@ -161,8 +163,18 @@ bool Motor::check_DRV_fault() {
     GPIO_PinState nFAULT_state = HAL_GPIO_ReadPin(gate_driver_config_.nFAULT_port, gate_driver_config_.nFAULT_pin);
     if (nFAULT_state == GPIO_PIN_RESET) {
            //if(axis_->axis_num_ == 1){
-         error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_FAULT_STAT);
-        error_register2 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_VGS_STAT);
+
+               //only check the drv fault registers if it is a new fault state
+               //this fixes the lockups if they aren't present or vbus goes down
+
+               if(!lastDRVFaultState)
+               {
+         error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_1);
+         error_register2 = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_2);
+                lastDRVFaultState = true;
+               }
+
+              
           //}
 
         // Update DRV Fault Code
@@ -176,7 +188,13 @@ bool Motor::check_DRV_fault() {
         // local_regs->RcvCmd = true;
         // DRV8301_readData(&gate_driver_, local_regs);
         return false;
-    };
+    }
+    else
+    {
+    lastDRVFaultState = false;    
+    }
+    
+    
     return true;
 }
 

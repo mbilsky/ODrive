@@ -222,7 +222,7 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
         } else if (motor_number >= AXIS_COUNT) {
             respond(response_channel, use_checksum, "invalid motor %u", motor_number);
         } else {
-            respond(response_channel, use_checksum, "%f;%f;%f;%u;%f;%f;%u;%u;%u;%u;%u",
+            respond(response_channel, use_checksum, "%f;%f;%f;%u;%f;%f;%u;%u;%u;%u;%u;%u;%u",
                     (double)axes[motor_number]->encoder_.pos_estimate_,
                     (double)axes[motor_number]->encoder_.vel_estimate_,
                     (double)axes[motor_number]->motor_.current_control_.Iq_measured,
@@ -233,7 +233,9 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
                     (int)axes[motor_number]->fet_thermistor_.error_,
                     (int)axes[motor_number]->motor_.error_,
                     (int)axes[motor_number]->encoder_.error_,
-                    (int)axes[motor_number]->controller_.error_);
+                    (int)axes[motor_number]->controller_.error_,
+                    (int)axes[motor_number]->motor_.error_register,
+                    (int)axes[motor_number]->motor_.error_register2);
 
         }
 
