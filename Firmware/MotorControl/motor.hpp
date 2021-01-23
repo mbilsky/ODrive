@@ -111,8 +111,8 @@ public:
     const GateDriverHardwareConfig_t gate_driver_config_;
     Config_t& config_;
     Axis* axis_ = nullptr; // set by Axis constructor
-    uint16_t error_register = 0x0;
-    uint16_t error_register2 = 0x0;
+    uint16_t error_register_ = 0;
+    uint16_t error_register2_ = 0;
 
 //private:
 

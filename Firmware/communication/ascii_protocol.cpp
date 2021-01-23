@@ -36,7 +36,7 @@ static Introspectable root_obj = ODriveTypeInfo<ODrive>::make_introspectable(odr
 // @brief Sends a line on the specified output.
 template<typename ... TArgs>
 void respond(StreamSink& output, bool include_checksum, const char * fmt, TArgs&& ... args) {
-    char response[64]; // Hardcoded max buffer size. We silently truncate the output if it's too long for the buffer.
+    char response[128]; // Hardcoded max buffer size. We silently truncate the output if it's too long for the buffer.
     size_t len = snprintf(response, sizeof(response), fmt, std::forward<TArgs>(args)...);
     len = std::min(len, sizeof(response));
     output.process_bytes((uint8_t*)response, len, nullptr); // TODO: use process_all instead
@@ -234,8 +234,8 @@ void ASCII_protocol_process_line(const uint8_t* buffer, size_t len, StreamSink& 
                     (int)axes[motor_number]->motor_.error_,
                     (int)axes[motor_number]->encoder_.error_,
                     (int)axes[motor_number]->controller_.error_,
-                    (int)axes[motor_number]->motor_.error_register,
-                    (int)axes[motor_number]->motor_.error_register2);
+                    (int)axes[motor_number]->motor_.error_register_,
+                    (int)axes[motor_number]->motor_.error_register2_);
 
         }
 

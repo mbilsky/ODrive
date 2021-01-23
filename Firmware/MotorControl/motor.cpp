@@ -169,8 +169,10 @@ bool Motor::check_DRV_fault() {
 
                if(!lastDRVFaultState)
                {
-         error_register = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_1);
-         error_register2 = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_2);
+         HAL_Delay(2);
+         error_register_ = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_1);
+         HAL_Delay(2);
+         error_register2_ = (uint16_t) DRV8323_readSpi(&gate_driver_,DRV_FAULT_STATUS_2);
                 lastDRVFaultState = true;
                }
 
