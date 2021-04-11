@@ -89,6 +89,7 @@ public:
     }
     void reset_current_control();
 
+    void updatedrvregisters();
     void update_current_controller_gains();
     void DRV8301_setup();
     bool check_DRV_fault();
@@ -111,8 +112,7 @@ public:
     const GateDriverHardwareConfig_t gate_driver_config_;
     Config_t& config_;
     Axis* axis_ = nullptr; // set by Axis constructor
-    uint16_t error_register_ = 0;
-    uint16_t error_register2_ = 0;
+
 
 //private:
 
@@ -137,6 +137,8 @@ public:
     // It is for exclusive use by the safety_critical_... functions.
     ArmedState armed_state_ = ARMED_STATE_DISARMED; 
     bool is_calibrated_ = config_.pre_calibrated;
+    uint16_t error_register_ = 0;
+    uint16_t error_register2_ = 0;
     Iph_BC_t current_meas_ = {0.0f, 0.0f};
     Iph_BC_t DC_calib_ = {0.0f, 0.0f};
     float phase_current_rev_gain_ = 0.0f; // Reverse gain for ADC to Amps (to be set by DRV8301_setup)
@@ -161,6 +163,9 @@ public:
     };
     struct : GateDriverIntf {
         DrvFault drv_fault = DRV_FAULT_NO_FAULT;
+        uint16_t status_reg_1 = 21;
+        uint16_t status_reg_2 = 21;
+        uint16_t ctrl_reg_1 = 0;
     } gate_driver_exported_;
     DRV_SPI_8301_Vars_t gate_driver_regs_; //Local view of DRV registers (initialized by DRV8301_setup)
     float effective_current_lim_ = 10.0f;

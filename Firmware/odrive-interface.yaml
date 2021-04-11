@@ -567,9 +567,9 @@ interfaces:
               PVddUndervoltage: {bit: 8, doc: Power supply Vdd Under Voltage fault}
               GVddUndervoltage: {bit: 9, doc: DRV8301 Vdd Under Voltage fault}
               GVddOvervoltage: {bit: 10, doc: DRV8301 Vdd Over Voltage fault}
-          # status_reg_1: readonly uint32
-          # status_reg_2: readonly uint32
-          # ctrl_reg_1: readonly uint32
+          status_reg_1: readonly uint16
+          status_reg_2: readonly uint16
+          ctrl_reg_1: readonly uint16
           # ctrl_reg_2: readonly uint32
       timing_log:
         c_is_class: False
@@ -611,6 +611,9 @@ interfaces:
           acim_autoflux_enable: bool
           acim_autoflux_attack_gain: float32
           acim_autoflux_decay_gain: float32
+    functions:
+      updatedrvregisters:
+        
 
 
   ODrive.Controller:

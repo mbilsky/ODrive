@@ -50,6 +50,9 @@ uint16_t DRV8323regCsaCtrl =
   0 << 2  | //CCSA_CAL_C
   3;        //CSEN_LVL	
 
+uint16_t failCount = 0;
+bool drvEnable = true;
+
 void DRV8323_enable(DRV8323_Handle handle)
 {
 
@@ -57,7 +60,7 @@ void DRV8323_enable(DRV8323_Handle handle)
   HAL_GPIO_WritePin(handle->EngpioHandle, handle->EngpioNumber, GPIO_PIN_SET);
 
   //Wait for driver to come online
-  osDelay(10);
+  osDelay(100);
 
   // Make sure the Fault bit is not set during startup
   //while((DRV8301_readSpi(handle,DRV8301_RegName_Status_1) & DRV8301_STATUS1_FAULT_BITS) != 0);
@@ -73,44 +76,55 @@ void DRV8323_enable(DRV8323_Handle handle)
 
 uint16_t DRV8323_readSpi(DRV8323_Handle handle, uint8_t regAdr)
 {
+ 
+
     //uint16_t zerobuff = 0;
 	uint16_t controlword = 0x8000 | (regAdr & 0x7) << 11; //MSbit =1 for read, address is 3 bits (MSbit is always 0), data is 11 bits
 	uint16_t recbuff = 0xbeef;
-	
+	 //if(drvEnable){
   delay_us(1);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
-	 HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
   delay_us(1);
   //HAL_SPI_TransmitReceive(&hspi3, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
- HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
+  HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
+ 
+
  delay_us(1);
   //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
   HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_SET);
   delay_us(1);
-	return (0x7ff&recbuff);
+ //}
+	//return (0x7ff&recbuff);
+  return recbuff;
 }
+
 
 void DRV8323_writeSpi(DRV8323_Handle handle, uint8_t regAdr, uint16_t regVal)
 {
-	uint16_t controlword = (regAdr & 0x7) << 11 | (regVal & 0x7ff); //MSbit =0 for write, address is 3 bits (MSbit is always 0), data is 11 bits
-	delay_us(1);
+	uint16_t controlword = (regAdr) << 11 | (regVal & 0x7ff); //MSbit =0 for write, address is 3 bits (MSbit is always 0), data is 11 bits
+	//uint16_t controlword
+  
+  delay_us(2);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
 
-delay_us(1);
+delay_us(2);
 
+//if(drvEnable)
+//{
 //	HAL_SPI_Transmit(&hspi3, (uint8_t*)(&controlword), 1, 1000);
-   HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1000);
+HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1000);
+
+//} 
   
-  
-  
-  delay_us(1);
+  delay_us(2);
 
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
 HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_SET); 
 
 
-	delay_us(1);
+	delay_us(2);
   return;
 }
 
