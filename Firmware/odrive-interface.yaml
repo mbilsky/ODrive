@@ -522,6 +522,7 @@ interfaces:
           WaitingForUpdate:
           Armed:
       is_calibrated: readonly bool
+      drv_spi_fail_count: readonly uint16
       current_meas_phB: {type: readonly float32, c_name: current_meas_.phB}
       current_meas_phC: {type: readonly float32, c_name: current_meas_.phC}
       DC_calib_phB: {type: float32, c_name: DC_calib_.phB}
@@ -570,6 +571,8 @@ interfaces:
           status_reg_1: readonly uint16
           status_reg_2: readonly uint16
           ctrl_reg_1: readonly uint16
+          ctrl_reg_2: readonly uint16
+          ctrl_reg_2_preset: readonly uint16
           # ctrl_reg_2: readonly uint32
       timing_log:
         c_is_class: False

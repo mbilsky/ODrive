@@ -74,26 +74,56 @@ void DRV8323_enable(DRV8323_Handle handle)
 
 
 
+
 uint16_t DRV8323_readSpi(DRV8323_Handle handle, uint8_t regAdr)
 {
- 
+ /*
+ if(!handle->SPIenabled)
+ {
+    
+    if(HAL_GetTick() - handle->lastCheckTime > 1000 || HAL_GetTick() < handle->lastCheckTime)
+    {
+      
+      //handle->failCounter = 0;
+        handle->SPIenabled= true;
+    }
+
+ }
+*/
 
     //uint16_t zerobuff = 0;
 	uint16_t controlword = 0x8000 | (regAdr & 0x7) << 11; //MSbit =1 for read, address is 3 bits (MSbit is always 0), data is 11 bits
 	uint16_t recbuff = 0xbeef;
+
+  if(handle->SPIenabled)
+{
 	 //if(drvEnable){
   delay_us(1);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
   delay_us(1);
   //HAL_SPI_TransmitReceive(&hspi3, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
-  HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
+  HAL_StatusTypeDef output = HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1);
  
 
  delay_us(1);
   //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
   HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_SET);
   delay_us(1);
+
+  if(output != HAL_OK || recbuff == 0xbeef)
+  {
+    //then we need to log out
+   // handle->SPIenabled = false;
+    //handle->failCounter = 0;
+    
+  }
+  //handle->lastCheckTime = HAL_GetTick();
+}
+else{
+  //handle->failCounter++;
+}
+
  //}
 	//return (0x7ff&recbuff);
   return recbuff;
@@ -104,7 +134,10 @@ void DRV8323_writeSpi(DRV8323_Handle handle, uint8_t regAdr, uint16_t regVal)
 {
 	uint16_t controlword = (regAdr) << 11 | (regVal & 0x7ff); //MSbit =0 for write, address is 3 bits (MSbit is always 0), data is 11 bits
 	//uint16_t controlword
-  
+
+if(handle->SPIenabled)
+{
+
   delay_us(2);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
@@ -114,7 +147,7 @@ delay_us(2);
 //if(drvEnable)
 //{
 //	HAL_SPI_Transmit(&hspi3, (uint8_t*)(&controlword), 1, 1000);
-HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1000);
+HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1);
 
 //} 
   
@@ -123,7 +156,7 @@ HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1000);
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
 HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_SET); 
 
-
+}
 	delay_us(2);
   return;
 }

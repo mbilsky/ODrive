@@ -137,6 +137,7 @@ public:
     // It is for exclusive use by the safety_critical_... functions.
     ArmedState armed_state_ = ARMED_STATE_DISARMED; 
     bool is_calibrated_ = config_.pre_calibrated;
+    uint16_t drv_spi_fail_count_ = 0;
     uint16_t error_register_ = 0;
     uint16_t error_register2_ = 0;
     Iph_BC_t current_meas_ = {0.0f, 0.0f};
@@ -166,6 +167,8 @@ public:
         uint16_t status_reg_1 = 21;
         uint16_t status_reg_2 = 21;
         uint16_t ctrl_reg_1 = 0;
+        uint16_t ctrl_reg_2 = 0;
+        uint16_t ctrl_reg_2_preset = 0;
     } gate_driver_exported_;
     DRV_SPI_8301_Vars_t gate_driver_regs_; //Local view of DRV registers (initialized by DRV8301_setup)
     float effective_current_lim_ = 10.0f;
