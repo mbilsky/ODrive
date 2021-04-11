@@ -616,6 +616,7 @@ interfaces:
           acim_autoflux_decay_gain: float32
     functions:
       updatedrvregisters:
+      setupdrv:  
         
 
 

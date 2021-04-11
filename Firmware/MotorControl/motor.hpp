@@ -88,7 +88,7 @@ public:
         DRV8301_setup();
     }
     void reset_current_control();
-
+    void setupdrv();
     void updatedrvregisters();
     void update_current_controller_gains();
     void DRV8301_setup();

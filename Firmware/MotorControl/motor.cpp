@@ -155,6 +155,11 @@ HAL_Delay(2);
 
 }
 
+void Motor::setupdrv()
+{
+    Motor::DRV8301_setup();
+}
+
 void Motor::updatedrvregisters()
 {
 //Motor::DRV8301_setup();
