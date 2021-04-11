@@ -72,11 +72,15 @@ void DRV8323_enable(DRV8323_Handle handle)
 }
 
 
+  double         averageReadTime = 0.;           //!< how long it has taken to do the last 10 read calls
+  double          timeSum = 0.;
+  double          nVals = 0.0;
 
 
 uint16_t DRV8323_readSpi(DRV8323_Handle handle, uint8_t regAdr)
 {
  
+  uint32_t startTime = micros();
 
     //uint16_t zerobuff = 0;
 	uint16_t controlword = 0x8000 | (regAdr & 0x7) << 11; //MSbit =1 for read, address is 3 bits (MSbit is always 0), data is 11 bits
@@ -86,17 +90,44 @@ uint16_t DRV8323_readSpi(DRV8323_Handle handle, uint8_t regAdr)
 	//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_RESET);
   delay_us(1);
+ if(averageReadTime != 575757)
+ {
   //HAL_SPI_TransmitReceive(&hspi3, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
-  HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1000);
- 
+  HAL_SPI_TransmitReceive(handle->spiHandle, (uint8_t*)(&controlword), (uint8_t*)(&recbuff), 1, 1);
+ }
 
  delay_us(1);
   //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
   HAL_GPIO_WritePin(handle->nCSgpioHandle, handle->nCSgpioNumber, GPIO_PIN_SET);
   delay_us(1);
+  
+  //calculate the average read time 
+  timeSum += (double) (micros() - startTime);
+ nVals = nVals + 1.;
+
+
+  if(nVals > 10)
+  {
+    averageReadTime = timeSum / nVals;  
+    timeSum = 0.;
+    nVals = 0.;
+  }
+
+  if(recbuff == 0xbeef)
+  {
+    //then we know we failed to read :/
+    averageReadTime = 575757;
+  }
+//averageReadTime = micros();
  //}
 	//return (0x7ff&recbuff);
+
   return recbuff;
+}
+
+uint32_t DRV8323_average_read()
+{
+  return (uint32_t) averageReadTime;
 }
 
 
@@ -114,7 +145,7 @@ delay_us(2);
 //if(drvEnable)
 //{
 //	HAL_SPI_Transmit(&hspi3, (uint8_t*)(&controlword), 1, 1000);
-HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1000);
+HAL_SPI_Transmit(handle->spiHandle, (uint8_t*)(&controlword), 1, 1);
 
 //} 
   

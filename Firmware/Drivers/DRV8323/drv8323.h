@@ -408,6 +408,7 @@ typedef SPI_HandleTypeDef* SPI_Handle;
 typedef GPIO_TypeDef* GPIO_Handle;
 typedef uint16_t GPIO_Number_e;
 
+
 //! \brief Defines the DRV8323 object
 //!
 typedef struct _DRV8323_Obj_
@@ -419,6 +420,7 @@ typedef struct _DRV8323_Obj_
   GPIO_Number_e    nCSgpioNumber;               //!< the gpio number that is connected to the drv8301 nCS pin
   bool             RxTimeOut;                  //!< the timeout flag for the RX fifo
   bool             enableTimeOut;              //!< the timeout flag for drv8301 enable
+
 } DRV8323_Obj;
 
 
@@ -431,6 +433,8 @@ void DRV8323_enable(DRV8323_Handle handle);
 uint16_t DRV8323_readSpi(DRV8323_Handle handle, uint8_t regAdr);
 void DRV8323_writeSpi(DRV8323_Handle handle, uint8_t regAdr, uint16_t regVal);
 void DRV8323_setupSpi(DRV8323_Handle handle);
+
+uint32_t DRV8323_average_read();
 
 
 #ifdef __cplusplus

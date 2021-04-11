@@ -139,6 +139,7 @@ public:
     bool is_calibrated_ = config_.pre_calibrated;
     uint16_t error_register_ = 0;
     uint16_t error_register2_ = 0;
+    uint32_t averageReadMs_ = 0.;
     Iph_BC_t current_meas_ = {0.0f, 0.0f};
     Iph_BC_t DC_calib_ = {0.0f, 0.0f};
     float phase_current_rev_gain_ = 0.0f; // Reverse gain for ADC to Amps (to be set by DRV8301_setup)

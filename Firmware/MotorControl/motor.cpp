@@ -157,7 +157,7 @@ HAL_Delay(2);
 
 void Motor::updatedrvregisters()
 {
-Motor::DRV8301_setup();
+//Motor::DRV8301_setup();
 
 gate_driver_exported_.ctrl_reg_1 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_OCP_CTRL);
 
@@ -178,8 +178,8 @@ bool Motor::check_DRV_fault() {
                //only check the drv fault registers if it is a new fault state
                //this fixes the lockups if they aren't present or vbus goes down
 
-               if(!lastDRVFaultState)
-               {
+               //if(!lastDRVFaultState)
+              // {
          HAL_Delay(2);
         gate_driver_exported_.status_reg_1  = (uint16_t) DRV8323_readSpi(&gate_driver_,0x00);
          HAL_Delay(2);
@@ -188,7 +188,7 @@ bool Motor::check_DRV_fault() {
            HAL_Delay(2);    
                //read the csa register
                gate_driver_exported_.ctrl_reg_1 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_OCP_CTRL);
-               }
+              // }
 
               
           }
@@ -222,6 +222,8 @@ void Motor::set_error(Motor::Error error){
 }
 
 bool Motor::do_checks() {
+    updatedrvregisters();
+    averageReadMs_ = DRV8323_average_read();
     if (!check_DRV_fault()) {
         set_error(ERROR_DRV_FAULT);
         return false;
