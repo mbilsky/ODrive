@@ -19,6 +19,7 @@ Motor::Motor(const MotorHardwareConfig_t& hw_config,
             .EngpioNumber = gate_driver_config_.enable_pin,
             .nCSgpioHandle = gate_driver_config_.nCS_port,
             .nCSgpioNumber = gate_driver_config_.nCS_pin,
+
         }) {
     update_current_controller_gains();
 }
@@ -68,6 +69,11 @@ void Motor::update_current_controller_gains() {
 
 // @brief Set up the gate drivers
 void Motor::DRV8301_setup() {
+
+                gate_driver_.SPIenabled = true;
+            gate_driver_.lastCheckOutcome = false;
+            gate_driver_.failCounter = 789;
+            gate_driver_.lastCheckTime = 0;
     // for reference:
     // 20V/V on 500uOhm gives a range of +/- 150A
     // 40V/V on 500uOhm gives a range of +/- 75A
@@ -171,6 +177,7 @@ gate_driver_exported_.ctrl_reg_2 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_
 }
 
  bool lastDRVFaultState = false;
+ int lastCheckTime = 0;
 
 // @brief Checks if the gate driver is in operational state.
 // @returns: true if the gate driver is OK (no fault), false otherwise
@@ -179,38 +186,21 @@ bool Motor::check_DRV_fault() {
     //TODO: make this pin configurable per motor ch
     GPIO_PinState nFAULT_state = HAL_GPIO_ReadPin(gate_driver_config_.nFAULT_port, gate_driver_config_.nFAULT_pin);
     if (nFAULT_state == GPIO_PIN_RESET) {
-          // if(axis_->axis_num_ == 0){
+      
 
-//gate_driver_exported_.status_reg_2 = 25;
-               //only check the drv fault registers if it is a new fault state
-               //this fixes the lockups if they aren't present or vbus goes down
 
-               //if(!lastDRVFaultState)
-             //  {
-         //HAL_Delay(2);
-        gate_driver_exported_.status_reg_1  = (uint16_t) DRV8323_readSpi(&gate_driver_,0x00);
-         //HAL_Delay(2);
-        gate_driver_exported_.status_reg_2 = (uint16_t) DRV8323_readSpi(&gate_driver_,0x01);
-               // lastDRVFaultState = true;
-           //HAL_Delay(2);    
-               //read the csa register
-               //gate_driver_exported_.ctrl_reg_1 = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_OCP_CTRL);
-               
-               //}
+        uint16_t tmpVal  = (uint16_t) DRV8323_readSpi(&gate_driver_,0x00);
+   
+        if(tmpVal != 0xbeef)
+        {
+            gate_driver_exported_.status_reg_1 = tmpVal;
 
-           
-          //}
+            gate_driver_exported_.status_reg_2 = (uint16_t) DRV8323_readSpi(&gate_driver_,0x01);
+        }
 
-        // Update DRV Fault Code
-        //gate_driver_exported_.drv_fault = (GateDriverIntf::DrvFault)DRV8301_getFaultType(&gate_driver_);
         
+
         
-        
-        
-        // Update/Cache all SPI device registers
-        // DRV_SPI_8301_Vars_t* local_regs = &gate_driver_regs_;
-        // local_regs->RcvCmd = true;
-        // DRV8301_readData(&gate_driver_, local_regs);
         return false;
     }
     else
@@ -235,11 +225,15 @@ bool Motor::do_checks() {
     //read the low side register. if it is zero, then comms are down
     if(gate_driver_.SPIenabled)
     {
+        gate_driver_.failCounter =456;
+        
         uint16_t gateLSVal = (uint16_t) DRV8323_readSpi(&gate_driver_,ADR_GATE_DRV_LS);
-        if(gateLSVal == 0 || gateLSVal == 0xbeef)
+        //gate_driver_exported_.ctrl_reg_2_preset = gateLSVal;
+        if(gateLSVal == 0 || gateLSVal == 0xbeef || gateLSVal == 0xFFFF)
         {
             gate_driver_.SPIenabled = false;
             gate_driver_.failCounter = 222;
+            
         }
         else
         {
@@ -251,16 +245,17 @@ bool Motor::do_checks() {
                 //and check the register values
                 Motor::updatedrvregisters();
             }
+            gate_driver_.lastCheckOutcome = true;
         }
         
         gate_driver_.lastCheckTime = HAL_GetTick();
-        gate_driver_.lastCheckOutcome = true;
+        
     }
     else
     {
            if(HAL_GetTick() - gate_driver_.lastCheckTime > 1000 || HAL_GetTick() < gate_driver_.lastCheckTime)
     {
-      gate_driver_.failCounter = 0;
+      gate_driver_.failCounter =123;
       gate_driver_.SPIenabled = true;
       gate_driver_.lastCheckOutcome = false;
  
